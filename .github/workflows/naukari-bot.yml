@@ -1,0 +1,50 @@
+name: Naukari Profile Updater
+
+on:
+  # Run every 4 hours
+  schedule:
+    - cron: '0 */4 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      force_run:
+        description: 'Force run the automation'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  update-profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Install Playwright browsers
+      run: npx playwright install chromium
+      
+    - name: Run Naukari automation
+      env:
+        NAUKRI_USERNAME: ${{ secrets.NAUKRI_USERNAME }}
+        NAUKRI_PASSWORD: ${{ secrets.NAUKRI_PASSWORD }}
+      run: npm start
+      
+    - name: Upload error screenshot (if exists)
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: error-screenshot
+        path: error-screenshot.png
+        if-no-files-found: ignore 

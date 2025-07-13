@@ -1,0 +1,20 @@
+{
+  "name": "naukari-bot",
+  "version": "1.0.0",
+  "description": "Automated Naukri.com profile updater using Playwright",
+  "main": "src/naukari-bot.js",
+  "scripts": {
+    "test": "playwright test",
+    "start": "node src/naukari-bot.js",
+    "install-browsers": "playwright install"
+  },
+  "keywords": ["automation", "playwright", "naukri", "bot"],
+  "author": "ChiragBaid",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0"
+  }
+} 
