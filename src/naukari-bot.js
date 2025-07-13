@@ -86,6 +86,10 @@ async function updateNaukriProfile() {
         if (await usernameField.isVisible()) {
           console.log(`✅ Found username field with selector: ${selector}`);
           await usernameField.fill(process.env.NAUKRI_USERNAME);
+          
+          // Verify the username was filled
+          const filledValue = await usernameField.inputValue();
+          console.log(`📝 Username field value: ${filledValue ? filledValue.substring(0, 3) + '***' : 'empty'}`);
           break;
         }
       } catch (e) {
@@ -120,6 +124,10 @@ async function updateNaukriProfile() {
         if (await passwordField.isVisible()) {
           console.log(`✅ Found password field with selector: ${selector}`);
           await passwordField.fill(process.env.NAUKRI_PASSWORD);
+          
+          // Verify the password was filled
+          const filledValue = await passwordField.inputValue();
+          console.log(`📝 Password field value: ${filledValue ? '***' + filledValue.length + ' chars***' : 'empty'}`);
           break;
         }
       } catch (e) {
@@ -220,6 +228,57 @@ async function updateNaukriProfile() {
       }
       
       throw new Error('Could not find login button');
+    } else {
+      // Try multiple login attempts with different approaches
+      console.log('🔄 Attempting login with multiple methods...');
+      
+      // Method 1: Direct click
+      try {
+        await loginButton.click();
+        console.log('✅ Method 1: Direct click');
+        await page.waitForTimeout(3000);
+        
+        const currentUrl = page.url();
+        if (currentUrl.includes('naukri.com') && !currentUrl.includes('login')) {
+          console.log('✅ Login successful with direct click!');
+          return;
+        }
+      } catch (e) {
+        console.log('❌ Method 1 failed');
+      }
+      
+      // Method 2: Form submission
+      try {
+        await page.evaluate(() => {
+          const form = document.querySelector('form');
+          if (form) form.submit();
+        });
+        console.log('✅ Method 2: Form submission');
+        await page.waitForTimeout(3000);
+        
+        const currentUrl = page.url();
+        if (currentUrl.includes('naukri.com') && !currentUrl.includes('login')) {
+          console.log('✅ Login successful with form submission!');
+          return;
+        }
+      } catch (e) {
+        console.log('❌ Method 2 failed');
+      }
+      
+      // Method 3: Enter key
+      try {
+        await page.keyboard.press('Enter');
+        console.log('✅ Method 3: Enter key');
+        await page.waitForTimeout(3000);
+        
+        const currentUrl = page.url();
+        if (currentUrl.includes('naukri.com') && !currentUrl.includes('login')) {
+          console.log('✅ Login successful with Enter key!');
+          return;
+        }
+      } catch (e) {
+        console.log('❌ Method 3 failed');
+      }
     }
     
     // Wait for login to complete or check for error messages
@@ -238,7 +297,8 @@ async function updateNaukriProfile() {
       const errorSelectors = [
         '.error', '.alert', '[data-testid="error"]', 
         '.error-message', '.login-error', '.invalid-credentials',
-        '[class*="error"]', '[class*="alert"]'
+        '[class*="error"]', '[class*="alert"]', '.toast-error',
+        '.notification-error', '.message-error'
       ];
       
       for (const selector of errorSelectors) {
@@ -254,9 +314,73 @@ async function updateNaukriProfile() {
         }
       }
       
+      // Check if we need to handle OTP or additional verification
+      console.log('🔍 Checking for additional verification steps...');
+      
+      // Check for OTP input
+      const otpSelectors = [
+        'input[placeholder*="OTP"]', 'input[placeholder*="otp"]',
+        'input[name*="otp"]', 'input[id*="otp"]',
+        'input[type="text"]'
+      ];
+      
+      for (const selector of otpSelectors) {
+        try {
+          const otpField = await page.locator(selector).first();
+          if (await otpField.isVisible()) {
+            console.log('⚠️ OTP field detected - manual intervention required');
+            throw new Error('Login failed: OTP verification required');
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      
+      // Check for captcha
+      const captchaSelectors = [
+        'iframe[src*="captcha"]', '.captcha', '[class*="captcha"]',
+        'div[class*="recaptcha"]', 'iframe[src*="recaptcha"]'
+      ];
+      
+      for (const selector of captchaSelectors) {
+        try {
+          const captcha = await page.locator(selector).first();
+          if (await captcha.isVisible()) {
+            console.log('⚠️ Captcha detected - manual intervention required');
+            throw new Error('Login failed: Captcha verification required');
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      
       // Check current URL to see where we ended up
       const currentUrl = page.url();
       console.log(`❌ Current URL after login attempt: ${currentUrl}`);
+      
+      // Check if we're still on login page but with different parameters
+      if (currentUrl.includes('login') && currentUrl.includes('error')) {
+        console.log('❌ Login page shows error in URL');
+        throw new Error('Login failed: Invalid credentials or account locked');
+      }
+      
+      // Check for any success indicators that might not trigger URL change
+      const successSelectors = [
+        '.welcome', '.dashboard', '.profile', '.user-info',
+        '[class*="welcome"]', '[class*="dashboard"]'
+      ];
+      
+      for (const selector of successSelectors) {
+        try {
+          const successElement = await page.locator(selector).first();
+          if (await successElement.isVisible()) {
+            console.log('✅ Found success indicator, login might have worked');
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
       
       throw new Error('Login failed: Could not redirect to dashboard');
     }
