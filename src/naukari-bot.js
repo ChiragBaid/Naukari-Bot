@@ -302,19 +302,33 @@ async function updateNaukriProfile() {
         '.error', '.alert', '[data-testid="error"]', 
         '.error-message', '.login-error', '.invalid-credentials',
         '[class*="error"]', '[class*="alert"]', '.toast-error',
-        '.notification-error', '.message-error'
+        '.notification-error', '.message-error', '.toast',
+        '.notification', '.message', '.warning', '.info',
+        '[class*="toast"]', '[class*="notification"]', '[class*="message"]'
       ];
       
+      console.log('🔍 Checking for error messages...');
       for (const selector of errorSelectors) {
         try {
           const errorMessage = await page.locator(selector).first();
           if (await errorMessage.isVisible()) {
             const errorText = await errorMessage.textContent();
-            console.log(`❌ Found error message: ${errorText}`);
+            console.log(`❌ Found error message with selector "${selector}": ${errorText}`);
             throw new Error(`Login failed: ${errorText}`);
           }
         } catch (e) {
           continue;
+        }
+      }
+      
+      // Check for any text that might indicate an error
+      console.log('🔍 Checking page content for error indicators...');
+      const pageText = await page.textContent('body');
+      const errorKeywords = ['invalid', 'incorrect', 'wrong', 'failed', 'error', 'locked', 'blocked', 'suspended'];
+      
+      for (const keyword of errorKeywords) {
+        if (pageText.toLowerCase().includes(keyword)) {
+          console.log(`⚠️ Found potential error keyword: "${keyword}"`);
         }
       }
       
@@ -369,21 +383,44 @@ async function updateNaukriProfile() {
       }
       
       // Check for any success indicators that might not trigger URL change
+      console.log('🔍 Checking for success indicators...');
       const successSelectors = [
         '.welcome', '.dashboard', '.profile', '.user-info',
-        '[class*="welcome"]', '[class*="dashboard"]'
+        '[class*="welcome"]', '[class*="dashboard"]', '.user-name',
+        '.profile-name', '.account-info', '.logout', '.signout'
       ];
       
       for (const selector of successSelectors) {
         try {
           const successElement = await page.locator(selector).first();
           if (await successElement.isVisible()) {
-            console.log('✅ Found success indicator, login might have worked');
-            break;
+            const successText = await successElement.textContent();
+            console.log(`✅ Found success indicator "${selector}": ${successText}`);
+            console.log('✅ Login appears to be successful despite URL not changing');
+            return; // Exit the function as login was successful
           }
         } catch (e) {
           continue;
         }
+      }
+      
+      // Check if we can navigate to a protected page
+      console.log('🔍 Testing if we can access protected pages...');
+      try {
+        await page.goto('https://www.naukri.com/mnjuser/profile', { 
+          waitUntil: 'networkidle',
+          timeout: 10000 
+        });
+        
+        const currentUrl = page.url();
+        if (currentUrl.includes('profile') && !currentUrl.includes('login')) {
+          console.log('✅ Successfully accessed profile page - login worked!');
+          return; // Exit the function as login was successful
+        } else {
+          console.log(`❌ Could not access profile page, redirected to: ${currentUrl}`);
+        }
+      } catch (e) {
+        console.log('❌ Error accessing profile page:', e.message);
       }
       
       throw new Error('Login failed: Could not redirect to dashboard');
