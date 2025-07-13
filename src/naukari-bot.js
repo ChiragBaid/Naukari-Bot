@@ -22,6 +22,13 @@ async function updateNaukriProfile() {
       timeout: 30000 
     });
     
+    // Take a screenshot to see what the page looks like
+    await page.screenshot({ path: 'login-page.png' });
+    console.log('📸 Login page screenshot saved');
+    
+    // Wait a bit for the page to fully load
+    await page.waitForTimeout(3000);
+    
     // Step 2: Login with credentials
     console.log('🔐 Logging in...');
     
@@ -31,7 +38,10 @@ async function updateNaukriProfile() {
       'input[name="email"]',
       'input[type="email"]',
       'input[placeholder*="email" i]',
-      'input[placeholder*="username" i]'
+      'input[placeholder*="username" i]',
+      'input[id*="email"]',
+      'input[id*="username"]',
+      'input[type="text"]'
     ];
     
     const passwordSelectors = [
@@ -46,15 +56,31 @@ async function updateNaukriProfile() {
       try {
         usernameField = await page.locator(selector).first();
         if (await usernameField.isVisible()) {
+          console.log(`✅ Found username field with selector: ${selector}`);
           await usernameField.fill(process.env.NAUKRI_USERNAME);
           break;
         }
       } catch (e) {
+        console.log(`❌ Selector ${selector} not found or not visible`);
         continue;
       }
     }
     
     if (!usernameField) {
+      console.log('❌ Could not find username field. Available inputs:');
+      const allInputs = await page.locator('input').all();
+      for (let i = 0; i < allInputs.length; i++) {
+        try {
+          const input = allInputs[i];
+          const type = await input.getAttribute('type');
+          const name = await input.getAttribute('name');
+          const id = await input.getAttribute('id');
+          const placeholder = await input.getAttribute('placeholder');
+          console.log(`  Input ${i}: type="${type}", name="${name}", id="${id}", placeholder="${placeholder}"`);
+        } catch (e) {
+          console.log(`  Input ${i}: Could not get attributes`);
+        }
+      }
       throw new Error('Could not find username/email field');
     }
     
@@ -64,15 +90,30 @@ async function updateNaukriProfile() {
       try {
         passwordField = await page.locator(selector).first();
         if (await passwordField.isVisible()) {
+          console.log(`✅ Found password field with selector: ${selector}`);
           await passwordField.fill(process.env.NAUKRI_PASSWORD);
           break;
         }
       } catch (e) {
+        console.log(`❌ Password selector ${selector} not found or not visible`);
         continue;
       }
     }
     
     if (!passwordField) {
+      console.log('❌ Could not find password field. Available password inputs:');
+      const allPasswordInputs = await page.locator('input[type="password"]').all();
+      for (let i = 0; i < allPasswordInputs.length; i++) {
+        try {
+          const input = allPasswordInputs[i];
+          const name = await input.getAttribute('name');
+          const id = await input.getAttribute('id');
+          const placeholder = await input.getAttribute('placeholder');
+          console.log(`  Password Input ${i}: name="${name}", id="${id}", placeholder="${placeholder}"`);
+        } catch (e) {
+          console.log(`  Password Input ${i}: Could not get attributes`);
+        }
+      }
       throw new Error('Could not find password field');
     }
     
@@ -82,7 +123,10 @@ async function updateNaukriProfile() {
       'button:has-text("Login")',
       'button:has-text("Sign In")',
       '.login-btn',
-      '[data-testid="login-button"]'
+      '[data-testid="login-button"]',
+      'input[type="submit"]',
+      'button[class*="login"]',
+      'button[class*="submit"]'
     ];
     
     let loginButton = null;
@@ -90,29 +134,69 @@ async function updateNaukriProfile() {
       try {
         loginButton = await page.locator(selector).first();
         if (await loginButton.isVisible()) {
+          console.log(`✅ Found login button with selector: ${selector}`);
           await loginButton.click();
           break;
         }
       } catch (e) {
+        console.log(`❌ Login button selector ${selector} not found or not visible`);
         continue;
       }
     }
     
     if (!loginButton) {
+      console.log('❌ Could not find login button. Available buttons:');
+      const allButtons = await page.locator('button, input[type="submit"]').all();
+      for (let i = 0; i < allButtons.length; i++) {
+        try {
+          const button = allButtons[i];
+          const text = await button.textContent();
+          const type = await button.getAttribute('type');
+          const className = await button.getAttribute('class');
+          console.log(`  Button ${i}: text="${text?.trim()}", type="${type}", class="${className}"`);
+        } catch (e) {
+          console.log(`  Button ${i}: Could not get attributes`);
+        }
+      }
       throw new Error('Could not find login button');
     }
     
     // Wait for login to complete or check for error messages
+    console.log('⏳ Waiting for login to complete...');
     try {
       await page.waitForURL('**/naukri.com/**', { timeout: 30000 });
       console.log('✅ Login successful');
     } catch (error) {
+      console.log('❌ Login redirect failed, checking for errors...');
+      
+      // Take a screenshot to see what happened
+      await page.screenshot({ path: 'login-error.png' });
+      console.log('📸 Login error screenshot saved');
+      
       // Check if there's an error message on the page
-      const errorMessage = await page.locator('.error, .alert, [data-testid="error"]').first();
-      if (await errorMessage.isVisible()) {
-        const errorText = await errorMessage.textContent();
-        throw new Error(`Login failed: ${errorText}`);
+      const errorSelectors = [
+        '.error', '.alert', '[data-testid="error"]', 
+        '.error-message', '.login-error', '.invalid-credentials',
+        '[class*="error"]', '[class*="alert"]'
+      ];
+      
+      for (const selector of errorSelectors) {
+        try {
+          const errorMessage = await page.locator(selector).first();
+          if (await errorMessage.isVisible()) {
+            const errorText = await errorMessage.textContent();
+            console.log(`❌ Found error message: ${errorText}`);
+            throw new Error(`Login failed: ${errorText}`);
+          }
+        } catch (e) {
+          continue;
+        }
       }
+      
+      // Check current URL to see where we ended up
+      const currentUrl = page.url();
+      console.log(`❌ Current URL after login attempt: ${currentUrl}`);
+      
       throw new Error('Login failed: Could not redirect to dashboard');
     }
     
