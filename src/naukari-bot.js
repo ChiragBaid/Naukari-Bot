@@ -55,6 +55,8 @@ async function updateNaukriProfile() {
     
     // Step 2: Login with credentials
     console.log('🔐 Logging in...');
+    console.log(`🔑 Username available: ${process.env.NAUKRI_USERNAME ? 'Yes' : 'No'}`);
+    console.log(`🔑 Password available: ${process.env.NAUKRI_PASSWORD ? 'Yes' : 'No'}`);
     
     // Try multiple possible login selectors
     const usernameSelectors = [
@@ -108,7 +110,8 @@ async function updateNaukriProfile() {
           const name = await input.getAttribute('name');
           const id = await input.getAttribute('id');
           const placeholder = await input.getAttribute('placeholder');
-          console.log(`  Input ${i}: type="${type}", name="${name}", id="${id}", placeholder="${placeholder}"`);
+          const isVisible = await input.isVisible();
+          console.log(`  Input ${i}: type="${type}", name="${name}", id="${id}", placeholder="${placeholder}", visible=${isVisible}`);
         } catch (e) {
           console.log(`  Input ${i}: Could not get attributes`);
         }
@@ -190,7 +193,8 @@ async function updateNaukriProfile() {
           const text = await button.textContent();
           const type = await button.getAttribute('type');
           const className = await button.getAttribute('class');
-          console.log(`  Button ${i}: text="${text?.trim()}", type="${type}", class="${className}"`);
+          const isVisible = await button.isVisible();
+          console.log(`  Button ${i}: text="${text?.trim()}", type="${type}", class="${className}", visible=${isVisible}`);
         } catch (e) {
           console.log(`  Button ${i}: Could not get attributes`);
         }
