@@ -407,7 +407,7 @@ async function updateNaukriProfile() {
       // Check if we can navigate to a protected page
       console.log('🔍 Testing if we can access protected pages...');
       try {
-        await page.goto('https://www.naukri.com/mnjuser/profile', { 
+        await page.goto('https://www.naukri.com/mnjuser/profile?id=&altresid', { 
           waitUntil: 'networkidle',
           timeout: 10000 
         });
@@ -428,10 +428,14 @@ async function updateNaukriProfile() {
     
     // Step 3: Navigate to profile page
     console.log('👤 Navigating to profile...');
-    await page.goto('https://www.naukri.com/mnjuser/profile', { 
+    await page.goto('https://www.naukri.com/mnjuser/profile?id=&altresid', { 
       waitUntil: 'networkidle',
       timeout: 30000 
     });
+    
+    // Take screenshot of profile page
+    await page.screenshot({ path: 'profile-page.png' });
+    console.log('📸 Profile page screenshot saved');
     
     // Step 4: Wait for profile to load and find the summary section
     console.log('📝 Looking for profile summary...');
@@ -535,6 +539,10 @@ async function updateNaukriProfile() {
     
     // Step 11: Wait for save confirmation
     await page.waitForTimeout(3000);
+    
+    // Take screenshot after profile update
+    await page.screenshot({ path: 'profile-updated.png' });
+    console.log('📸 Profile updated screenshot saved');
     
     console.log('✅ Profile update completed successfully!');
     

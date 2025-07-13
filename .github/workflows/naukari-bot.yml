@@ -50,4 +50,6 @@ jobs:
           error-screenshot.png
           login-page.png
           login-error.png
+          profile-page.png
+          profile-updated.png
         if-no-files-found: ignore 
