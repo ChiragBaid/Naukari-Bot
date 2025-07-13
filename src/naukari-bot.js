@@ -22,6 +22,30 @@ async function updateNaukriProfile() {
       timeout: 30000 
     });
     
+    // Check if we need to handle any popups or overlays
+    try {
+      const popupSelectors = [
+        '.close', '.popup-close', '[aria-label="Close"]',
+        'button:has-text("Close")', 'button:has-text("×")'
+      ];
+      
+      for (const selector of popupSelectors) {
+        try {
+          const popup = await page.locator(selector).first();
+          if (await popup.isVisible()) {
+            await popup.click();
+            console.log('✅ Closed popup/overlay');
+            await page.waitForTimeout(1000);
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+    } catch (e) {
+      // No popups to close
+    }
+    
     // Take a screenshot to see what the page looks like
     await page.screenshot({ path: 'login-page.png' });
     console.log('📸 Login page screenshot saved');
@@ -34,6 +58,8 @@ async function updateNaukriProfile() {
     
     // Try multiple possible login selectors
     const usernameSelectors = [
+      'input[id="usernameField"]',
+      'input[placeholder="Enter Email ID / Username"]',
       'input[name="username"]',
       'input[name="email"]',
       'input[type="email"]',
@@ -45,6 +71,8 @@ async function updateNaukriProfile() {
     ];
     
     const passwordSelectors = [
+      'input[id="passwordField"]',
+      'input[placeholder="Enter Password"]',
       'input[name="password"]',
       'input[type="password"]',
       'input[placeholder*="password" i]'
@@ -119,8 +147,9 @@ async function updateNaukriProfile() {
     
     // Click login button
     const loginSelectors = [
-      'button[type="submit"]',
       'button:has-text("Login")',
+      'button[type="submit"]',
+      'button.waves-effect.waves-light.btn-large.btn-block.btn-bold.blue-btn.textTransform',
       'button:has-text("Sign In")',
       '.login-btn',
       '[data-testid="login-button"]',
@@ -158,6 +187,38 @@ async function updateNaukriProfile() {
           console.log(`  Button ${i}: Could not get attributes`);
         }
       }
+      
+      // Try alternative login methods
+      console.log('🔄 Trying alternative login methods...');
+      
+      // Method 1: Try pressing Enter key
+      try {
+        await page.keyboard.press('Enter');
+        console.log('✅ Pressed Enter key');
+        await page.waitForTimeout(2000);
+      } catch (e) {
+        console.log('❌ Enter key method failed');
+      }
+      
+      // Method 2: Try clicking on any visible button that might be login
+      try {
+        const anyButton = await page.locator('button').first();
+        if (await anyButton.isVisible()) {
+          await anyButton.click();
+          console.log('✅ Clicked first available button');
+          await page.waitForTimeout(2000);
+        }
+      } catch (e) {
+        console.log('❌ Alternative button click failed');
+      }
+      
+      // Check if any of the alternative methods worked
+      const currentUrl = page.url();
+      if (currentUrl.includes('naukri.com') && !currentUrl.includes('login')) {
+        console.log('✅ Alternative login method worked!');
+        return; // Skip the rest of the login process
+      }
+      
       throw new Error('Could not find login button');
     }
     
