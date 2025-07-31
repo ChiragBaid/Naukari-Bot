@@ -41,15 +41,4 @@ jobs:
         NAUKRI_PASSWORD: ${{ secrets.NAUKRI_PASSWORD }}
       run: npm start
       
-    - name: Upload debug screenshots (if exists)
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: debug-screenshots
-        path: |
-          error-screenshot.png
-          login-page.png
-          login-error.png
-          profile-page.png
-          profile-updated.png
-        if-no-files-found: ignore 
+ 

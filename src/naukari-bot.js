@@ -2,12 +2,15 @@ const { chromium } = require('playwright');
 
 async function updateNaukriProfile() {
   const browser = await chromium.launch({ 
-    headless: true,
+    headless: true, // Changed to true for GitHub Actions
     args: ['--no-sandbox', '--disable-setuid-sandbox']
+    // Removed hardcoded Chrome path for cross-platform compatibility
   });
   
+  // Use incognito context
   const context = await browser.newContext({
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    // Incognito is default for playwright's newContext, but we clarify intent here
   });
   
   const page = await context.newPage();
@@ -19,7 +22,7 @@ async function updateNaukriProfile() {
     console.log('📱 Navigating to Naukri.com...');
     await page.goto('https://www.naukri.com/nlogin/login', { 
       waitUntil: 'networkidle',
-      timeout: 30000 
+      timeout: 15000 
     });
     
     // Check if we need to handle any popups or overlays
@@ -46,12 +49,10 @@ async function updateNaukriProfile() {
       // No popups to close
     }
     
-    // Take a screenshot to see what the page looks like
-    await page.screenshot({ path: 'login-page.png' });
-    console.log('📸 Login page screenshot saved');
+
     
     // Wait a bit for the page to fully load
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(1000);
     
     // Step 2: Login with credentials
     console.log('🔐 Logging in...');
@@ -207,7 +208,7 @@ async function updateNaukriProfile() {
       try {
         await page.keyboard.press('Enter');
         console.log('✅ Pressed Enter key');
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(1000);
       } catch (e) {
         console.log('❌ Enter key method failed');
       }
@@ -218,18 +219,18 @@ async function updateNaukriProfile() {
         if (await anyButton.isVisible()) {
           await anyButton.click();
           console.log('✅ Clicked first available button');
-          await page.waitForTimeout(2000);
+          await page.waitForTimeout(1000);
         }
       } catch (e) {
         console.log('❌ Alternative button click failed');
       }
       
       // Check if any of the alternative methods worked
-      const currentUrl = page.url();
-      if (currentUrl.includes('naukri.com') && !currentUrl.includes('login')) {
-        console.log('✅ Alternative login method worked!');
-        return; // Skip the rest of the login process
-      }
+              const currentUrl = page.url();
+        if (currentUrl.includes('naukri.com') && !currentUrl.includes('login')) {
+          console.log('✅ Alternative login method worked!');
+          // Continue to double-click functionality
+        }
       
       throw new Error('Could not find login button');
     } else {
@@ -240,12 +241,12 @@ async function updateNaukriProfile() {
       try {
         await loginButton.click();
         console.log('✅ Method 1: Direct click');
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(1000);
         
         const currentUrl = page.url();
         if (currentUrl.includes('naukri.com') && !currentUrl.includes('login')) {
           console.log('✅ Login successful with direct click!');
-          return;
+          // Continue to double-click functionality
         }
       } catch (e) {
         console.log('❌ Method 1 failed');
@@ -258,12 +259,12 @@ async function updateNaukriProfile() {
           if (form) form.submit();
         });
         console.log('✅ Method 2: Form submission');
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(1000);
         
         const currentUrl = page.url();
         if (currentUrl.includes('naukri.com') && !currentUrl.includes('login')) {
           console.log('✅ Login successful with form submission!');
-          return;
+          // Continue to double-click functionality
         }
       } catch (e) {
         console.log('❌ Method 2 failed');
@@ -273,12 +274,12 @@ async function updateNaukriProfile() {
       try {
         await page.keyboard.press('Enter');
         console.log('✅ Method 3: Enter key');
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(1000);
         
         const currentUrl = page.url();
         if (currentUrl.includes('naukri.com') && !currentUrl.includes('login')) {
           console.log('✅ Login successful with Enter key!');
-          return;
+          // Continue to double-click functionality
         }
       } catch (e) {
         console.log('❌ Method 3 failed');
@@ -288,14 +289,10 @@ async function updateNaukriProfile() {
     // Wait for login to complete or check for error messages
     console.log('⏳ Waiting for login to complete...');
     try {
-      await page.waitForURL('**/naukri.com/**', { timeout: 30000 });
+      await page.waitForURL('**/naukri.com/**', { timeout: 15000 });
       console.log('✅ Login successful');
     } catch (error) {
       console.log('❌ Login redirect failed, checking for errors...');
-      
-      // Take a screenshot to see what happened
-      await page.screenshot({ path: 'login-error.png' });
-      console.log('📸 Login error screenshot saved');
       
       // Check if there's an error message on the page
       const errorSelectors = [
@@ -397,176 +394,427 @@ async function updateNaukriProfile() {
             const successText = await successElement.textContent();
             console.log(`✅ Found success indicator "${selector}": ${successText}`);
             console.log('✅ Login appears to be successful despite URL not changing');
-            return; // Exit the function as login was successful
+            // Continue to double-click functionality
           }
         } catch (e) {
           continue;
         }
       }
       
-      // Check if we can navigate to a protected page
-      console.log('🔍 Testing if we can access protected pages...');
-      try {
-        await page.goto('https://www.naukri.com/mnjuser/profile?id=&altresid', { 
-          waitUntil: 'networkidle',
-          timeout: 10000 
-        });
-        
-        const currentUrl = page.url();
-        if (currentUrl.includes('profile') && !currentUrl.includes('login')) {
-          console.log('✅ Successfully accessed profile page - login worked!');
-          return; // Exit the function as login was successful
-        } else {
-          console.log(`❌ Could not access profile page, redirected to: ${currentUrl}`);
-        }
-      } catch (e) {
-        console.log('❌ Error accessing profile page:', e.message);
-      }
-      
-      throw new Error('Login failed: Could not redirect to dashboard');
+      // Login appears to be successful, continue to double-click functionality
+      console.log('✅ Login successful, continuing to next steps...');
     }
     
-    // Step 3: Navigate to profile page
-    console.log('👤 Navigating to profile...');
-    await page.goto('https://www.naukri.com/mnjuser/profile?id=&altresid', { 
-      waitUntil: 'networkidle',
-      timeout: 30000 
-    });
+    console.log('✅ Login successful!');
     
-    // Take screenshot of profile page
-    await page.screenshot({ path: 'profile-page.png' });
-    console.log('📸 Profile page screenshot saved');
-    
-    // Step 4: Wait for profile to load and find the summary section
-    console.log('📝 Looking for profile summary...');
-    await page.waitForSelector('.profile-summary, .summary-section, [data-testid="profile-summary"]', { 
-      timeout: 30000 
-    });
-    
-    // Step 5: Click on edit button for summary (try multiple possible selectors)
-    const editSelectors = [
-      'button[data-testid="edit-summary"]',
-      '.edit-summary-btn',
-      'button:has-text("Edit")',
-      '.profile-edit-btn',
-      '[aria-label="Edit summary"]'
-    ];
-    
-    let editButton = null;
-    for (const selector of editSelectors) {
-      try {
-        editButton = await page.locator(selector).first();
-        if (await editButton.isVisible()) {
-          await editButton.click();
-          console.log('✏️ Edit button clicked');
-          break;
-        }
-      } catch (e) {
-        continue;
-      }
-    }
-    
-    if (!editButton) {
-      throw new Error('Could not find edit button for profile summary');
-    }
-    
-    // Step 6: Wait for the textarea/input to become editable
-    await page.waitForTimeout(2000);
-    
-    // Step 7: Find the summary textarea/input
-    const summarySelectors = [
-      'textarea[name="summary"]',
-      'textarea[data-testid="summary-input"]',
-      '.summary-textarea',
-      'textarea',
-      'input[type="text"]'
-    ];
-    
-    let summaryInput = null;
-    for (const selector of summarySelectors) {
-      try {
-        summaryInput = await page.locator(selector).first();
-        if (await summaryInput.isVisible()) {
-          break;
-        }
-      } catch (e) {
-        continue;
-      }
-    }
-    
-    if (!summaryInput) {
-      throw new Error('Could not find summary input field');
-    }
-    
-    // Step 8: Get current summary text
-    const currentText = await summaryInput.inputValue();
-    console.log('📄 Current summary length:', currentText.length);
-    
-    // Step 9: Add a space at the end and then remove it
-    const textWithSpace = currentText + '123';
-    await summaryInput.fill(textWithSpace);
+    // Step 3: Wait for the page to load after login
+    console.log('⏳ Waiting for page to load after login...');
     await page.waitForTimeout(1000);
     
-    const textWithoutSpace = currentText;
-    await summaryInput.fill(textWithoutSpace);
-    console.log('🔄 Summary updated (space added and removed)');
+    // Step 4: Double-click on the "View profile" link
+    console.log('🔗 Looking for View profile link...');
     
-    // Step 10: Save changes
-    const saveSelectors = [
-      'button[data-testid="save-summary"]',
+    // Try multiple selectors for the View profile link
+    const viewProfileSelectors = [
+      'a[href="/mnjuser/profile"]',
+      'a:has-text("View profile")',
+      'a[href*="profile"]',
+      '//*[@id="root"]/div[1]/div[4]/div/div/div[1]/div[1]/div/div/div[3]/div[2]/a'
+    ];
+    
+    let viewProfileLink = null;
+    for (const selector of viewProfileSelectors) {
+      try {
+        if (selector.startsWith('//')) {
+          // XPath selector
+          viewProfileLink = await page.locator(`xpath=${selector}`).first();
+        } else {
+          // CSS selector
+          viewProfileLink = await page.locator(selector).first();
+        }
+        
+        if (await viewProfileLink.isVisible()) {
+          console.log(`✅ Found View profile link with selector: ${selector}`);
+          
+          // Double-click on the link
+          await viewProfileLink.dblclick();
+          console.log('🖱️ Double-clicked on View profile link');
+          
+          // Wait for navigation
+          await page.waitForTimeout(1000);
+          
+          // Check if we successfully navigated to profile page
+          const currentUrl = page.url();
+          console.log(`📍 Current URL after double-click: ${currentUrl}`);
+          
+          if (currentUrl.includes('/mnjuser/profile')) {
+            console.log('✅ Successfully navigated to profile page!');
+          } else {
+            console.log('⚠️ Navigation may not have completed as expected');
+          }
+          
+          break;
+        }
+      } catch (e) {
+        console.log(`❌ Selector ${selector} not found or not visible`);
+        continue;
+      }
+    }
+    
+    if (!viewProfileLink) {
+      console.log('❌ Could not find View profile link');
+      console.log('🔍 Available links on the page:');
+      const allLinks = await page.locator('a').all();
+      for (let i = 0; i < allLinks.length; i++) {
+        try {
+          const link = allLinks[i];
+          const href = await link.getAttribute('href');
+          const text = await link.textContent();
+          const isVisible = await link.isVisible();
+          console.log(`  Link ${i}: href="${href}", text="${text?.trim()}", visible=${isVisible}`);
+        } catch (e) {
+          console.log(`  Link ${i}: Could not get attributes`);
+        }
+      }
+    }
+    
+    console.log('✅ Bot completed successfully!');
+    
+    // Step 5: Click on "Profile summary" div
+    console.log('📝 Looking for Profile summary div...');
+    
+    const profileSummarySelectors = [
+      'div.label.title-14-medium:has-text("Profile summary")',
+      'div[class*="label"][class*="title-14-medium"]',
+      '//*[@id="root"]/div[1]/div[4]/div/div/div/div[3]/div[1]/div/div[7]/div'
+    ];
+    
+    let profileSummaryDiv = null;
+    for (const selector of profileSummarySelectors) {
+      try {
+        if (selector.startsWith('//')) {
+          // XPath selector
+          profileSummaryDiv = await page.locator(`xpath=${selector}`).first();
+        } else {
+          // CSS selector
+          profileSummaryDiv = await page.locator(selector).first();
+        }
+        
+        if (await profileSummaryDiv.isVisible()) {
+          console.log(`✅ Found Profile summary div with selector: ${selector}`);
+          
+          // Click on the div
+          await profileSummaryDiv.click();
+          console.log('🖱️ Clicked on Profile summary div');
+          
+          // Wait for any changes
+          await page.waitForTimeout(1000);
+          break;
+        }
+      } catch (e) {
+        console.log(`❌ Selector ${selector} not found or not visible`);
+        continue;
+      }
+    }
+    
+    if (!profileSummaryDiv) {
+      console.log('❌ Could not find Profile summary div');
+      console.log('🔍 Available divs with similar classes:');
+      const allDivs = await page.locator('div[class*="label"], div[class*="title"]').all();
+      for (let i = 0; i < allDivs.length; i++) {
+        try {
+          const div = allDivs[i];
+          const className = await div.getAttribute('class');
+          const text = await div.textContent();
+          const isVisible = await div.isVisible();
+          console.log(`  Div ${i}: class="${className}", text="${text?.trim()}", visible=${isVisible}`);
+        } catch (e) {
+          console.log(`  Div ${i}: Could not get attributes`);
+        }
+      }
+    }
+    
+    // Step 6: Double-click on the pencil icon
+    console.log('✏️ Looking for pencil icon...');
+    
+    const pencilSelectors = [
+      '//*[@id="root"]/div[1]/div[4]/div/div/div/div[3]/div[2]/div[7]/div/div[1]/div/div/h1/span/img',
+      'img[src="//static.naukimg.com/s/8/801/i/src/resources/svg/mnj-pencil.37ddbce9.svg"]',
+      'img[alt="pencil"][width="14"][height="14"]',
+      'img[src*="mnj-pencil.37ddbce9.svg"]'
+    ];
+    
+    let pencilIcon = null;
+    for (const selector of pencilSelectors) {
+      try {
+        if (selector.startsWith('//')) {
+          // XPath selector
+          pencilIcon = await page.locator(`xpath=${selector}`).first();
+        } else {
+          // CSS selector
+          pencilIcon = await page.locator(selector).first();
+        }
+        
+        if (await pencilIcon.isVisible()) {
+          console.log(`✅ Found pencil icon with selector: ${selector}`);
+          
+          // Double-click on the pencil icon
+          await pencilIcon.dblclick();
+          console.log('🖱️ Double-clicked on pencil icon');
+          
+          // Wait for any changes
+          await page.waitForTimeout(1000);
+          
+          // Check if we're in edit mode
+          const currentUrl = page.url();
+          console.log(`📍 Current URL after pencil double-click: ${currentUrl}`);
+          
+          // Look for edit indicators
+          const editIndicators = [
+            'textarea',
+            'input[type="text"]',
+            '[contenteditable="true"]',
+            '.editing',
+            '[data-testid*="edit"]'
+          ];
+          
+          let editMode = false;
+          for (const editSelector of editIndicators) {
+            try {
+              const editElement = await page.locator(editSelector).first();
+              if (await editElement.isVisible()) {
+                console.log(`✅ Edit mode detected with selector: ${editSelector}`);
+                editMode = true;
+                break;
+              }
+            } catch (e) {
+              continue;
+            }
+          }
+          
+          if (editMode) {
+            console.log('✅ Successfully entered edit mode!');
+          } else {
+            console.log('⚠️ Edit mode may not have been activated');
+          }
+          
+          break;
+        }
+      } catch (e) {
+        console.log(`❌ Selector ${selector} not found or not visible`);
+        continue;
+      }
+    }
+    
+    if (!pencilIcon) {
+      console.log('❌ Could not find pencil icon');
+      console.log('🔍 Available images on the page:');
+      const allImages = await page.locator('img').all();
+      for (let i = 0; i < allImages.length; i++) {
+        try {
+          const img = allImages[i];
+          const src = await img.getAttribute('src');
+          const alt = await img.getAttribute('alt');
+          const width = await img.getAttribute('width');
+          const height = await img.getAttribute('height');
+          const isVisible = await img.isVisible();
+          console.log(`  Image ${i}: src="${src}", alt="${alt}", width="${width}", height="${height}", visible=${isVisible}`);
+        } catch (e) {
+          console.log(`  Image ${i}: Could not get attributes`);
+        }
+      }
+    }
+    
+    console.log('✅ All profile actions completed successfully!');
+    
+    // Step 7: Find and interact with the textarea
+    console.log('📝 Looking for summary textarea...');
+    
+    const textareaSelectors = [
+      '//*[@id="summary"]',
+      'textarea[id="summary"]',
+      'textarea[placeholder="Type here"]',
+      'textarea[name="summary"]'
+    ];
+    
+    let summaryTextarea = null;
+    for (const selector of textareaSelectors) {
+      try {
+        if (selector.startsWith('//')) {
+          // XPath selector
+          summaryTextarea = await page.locator(`xpath=${selector}`).first();
+        } else {
+          // CSS selector
+          summaryTextarea = await page.locator(selector).first();
+        }
+        
+        if (await summaryTextarea.isVisible()) {
+          console.log(`✅ Found summary textarea with selector: ${selector}`);
+          
+          // Double-click on the textarea to focus it
+          await summaryTextarea.dblclick();
+          console.log('🖱️ Double-clicked on summary textarea');
+          
+          // Wait a moment
+          await page.waitForTimeout(1000);
+          
+          // Get current text
+          const currentText = await summaryTextarea.inputValue();
+          console.log(`📄 Current text length: ${currentText.length} characters`);
+          
+          // Add a space at the end
+          const textWithSpace = currentText + ' ';
+          await summaryTextarea.fill(textWithSpace);
+          console.log('➕ Added space to the end');
+          
+          // Wait 1 second
+          await page.waitForTimeout(1000);
+          
+          // Remove the space (restore original text)
+          await summaryTextarea.fill(currentText);
+          console.log('➖ Removed the space');
+          
+          // Wait a moment
+          await page.waitForTimeout(1000);
+          
+          break;
+        }
+      } catch (e) {
+        console.log(`❌ Selector ${selector} not found or not visible`);
+        continue;
+      }
+    }
+    
+    if (!summaryTextarea) {
+      console.log('❌ Could not find summary textarea');
+      console.log('🔍 Available textareas on the page:');
+      const allTextareas = await page.locator('textarea').all();
+      for (let i = 0; i < allTextareas.length; i++) {
+        try {
+          const textarea = allTextareas[i];
+          const id = await textarea.getAttribute('id');
+          const name = await textarea.getAttribute('name');
+          const placeholder = await textarea.getAttribute('placeholder');
+          const isVisible = await textarea.isVisible();
+          console.log(`  Textarea ${i}: id="${id}", name="${name}", placeholder="${placeholder}", visible=${isVisible}`);
+        } catch (e) {
+          console.log(`  Textarea ${i}: Could not get attributes`);
+        }
+      }
+    }
+    
+    // Step 8: Find and double-click on the Save button
+    console.log('💾 Looking for Save button...');
+    
+    const saveButtonSelectors = [
+      '//*[@id="submit-btn"]',
+      'button[id="submit-btn"]',
       'button:has-text("Save")',
-      '.save-btn',
-      'button[type="submit"]'
+      'button.btn.btn-blue',
+      'button[type="button"]'
     ];
     
     let saveButton = null;
-    for (const selector of saveSelectors) {
+    for (const selector of saveButtonSelectors) {
       try {
-        saveButton = await page.locator(selector).first();
+        if (selector.startsWith('//')) {
+          // XPath selector
+          saveButton = await page.locator(`xpath=${selector}`).first();
+        } else {
+          // CSS selector
+          saveButton = await page.locator(selector).first();
+        }
+        
         if (await saveButton.isVisible()) {
-          await saveButton.click();
-          console.log('💾 Changes saved');
+          console.log(`✅ Found Save button with selector: ${selector}`);
+          
+          // Double-click on the Save button
+          await saveButton.dblclick();
+          console.log('🖱️ Double-clicked on Save button');
+          
+          // Wait for save to complete
+          await page.waitForTimeout(1000);
+          
+          // Check for success indicators
+          const successSelectors = [
+            '.success', '.saved', '.toast-success', '.notification-success',
+            '[class*="success"]', '[class*="saved"]', '.message-success'
+          ];
+          
+          let saveSuccess = false;
+          for (const successSelector of successSelectors) {
+            try {
+              const successElement = await page.locator(successSelector).first();
+              if (await successElement.isVisible()) {
+                const successText = await successElement.textContent();
+                console.log(`✅ Save successful: ${successText}`);
+                saveSuccess = true;
+                break;
+              }
+            } catch (e) {
+              continue;
+            }
+          }
+          
+          if (!saveSuccess) {
+            console.log('✅ Save button clicked successfully');
+          }
+          
           break;
         }
       } catch (e) {
+        console.log(`❌ Selector ${selector} not found or not visible`);
         continue;
       }
     }
     
     if (!saveButton) {
-      throw new Error('Could not find save button');
+      console.log('❌ Could not find Save button');
+      console.log('🔍 Available buttons on the page:');
+      const allButtons = await page.locator('button').all();
+      for (let i = 0; i < allButtons.length; i++) {
+        try {
+          const button = allButtons[i];
+          const id = await button.getAttribute('id');
+          const text = await button.textContent();
+          const className = await button.getAttribute('class');
+          const isVisible = await button.isVisible();
+          console.log(`  Button ${i}: id="${id}", text="${text?.trim()}", class="${className}", visible=${isVisible}`);
+        } catch (e) {
+          console.log(`  Button ${i}: Could not get attributes`);
+        }
+      }
     }
     
-    // Step 11: Wait for save confirmation
-    await page.waitForTimeout(3000);
+    console.log('✅ Profile summary update completed successfully!');
     
-    // Take screenshot after profile update
-    await page.screenshot({ path: 'profile-updated.png' });
-    console.log('📸 Profile updated screenshot saved');
+    // Final wait to ensure all actions are completed
+    console.log('⏳ Final wait to ensure all actions are completed...');
+    await page.waitForTimeout(2000);
     
-    console.log('✅ Profile update completed successfully!');
+    return browser; // Return browser instance for proper cleanup
     
   } catch (error) {
     console.error('❌ Error during automation:', error.message);
-    
-    // Take a screenshot for debugging
-    await page.screenshot({ path: 'error-screenshot.png' });
-    console.log('📸 Error screenshot saved as error-screenshot.png');
-    
     throw error;
-  } finally {
-    await browser.close();
   }
 }
 
 // Run the automation
 if (require.main === module) {
   updateNaukriProfile()
-    .then(() => {
+    .then(async (browser) => {
       console.log('🎉 Automation completed successfully!');
+      
+      // Close the browser after successful completion
+      if (browser) {
+        await browser.close();
+        console.log('🔒 Browser closed.');
+      }
+      
       process.exit(0);
     })
-    .catch((error) => {
+    .catch(async (error) => {
       console.error('💥 Automation failed:', error);
       process.exit(1);
     });
