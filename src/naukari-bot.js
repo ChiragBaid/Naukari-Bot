@@ -659,23 +659,61 @@ async function updateNaukriProfile() {
           await page.waitForTimeout(1000);
           
           // Get current text
-          const currentText = await summaryTextarea.inputValue();
-          console.log(`📄 Current text length: ${currentText.length} characters`);
-          
-          // Add a space at the end
-          const textWithSpace = currentText + ' ';
-          await summaryTextarea.fill(textWithSpace);
-          console.log('➕ Added space to the end');
-          
-          // Wait 1 second
-          await page.waitForTimeout(1000);
-          
-          // Remove the space (restore original text)
-          await summaryTextarea.fill(currentText);
-          console.log('➖ Removed the space');
-          
-          // Wait a moment
-          await page.waitForTimeout(1000);
+          // Get current text
+const currentText = await summaryTextarea.inputValue();
+console.log(`📄 Current text length: ${currentText.length} characters`);
+
+// Step A: Add 'a' to the summary
+await summaryTextarea.fill(currentText + 'a');
+console.log('➕ Added "a" to summary');
+
+// Save changes
+console.log('💾 Saving summary with "a"...');
+for (const selector of saveButtonSelectors) {
+  try {
+    const button = page.locator(selector);
+    if (await button.isVisible()) {
+      await button.click();
+      console.log(`✅ Clicked Save button using selector: ${selector}`);
+      break;
+    }
+  } catch (err) {
+    console.log(`⚠️ Save button not found with selector: ${selector}`);
+  }
+}
+await page.waitForTimeout(2000);
+
+// Step B: Reopen Profile Summary again
+console.log('🔄 Reopening Profile summary to remove "a"...');
+await profileSummaryDiv.click();
+await page.waitForTimeout(1000);
+
+// Re-select textarea (important, since DOM might reload after save)
+const newTextarea = await page.locator('textarea[id="summary"]').first();
+if (await newTextarea.isVisible()) {
+  // Remove the "a" (restore original text)
+  await newTextarea.fill(currentText);
+  console.log('➖ Removed "a" from summary');
+
+  // Save again
+  console.log('💾 Saving summary without "a"...');
+  for (const selector of saveButtonSelectors) {
+    try {
+      const button = page.locator(selector);
+      if (await button.isVisible()) {
+        await button.click();
+        console.log(`✅ Clicked Save button using selector: ${selector}`);
+        break;
+      }
+    } catch (err) {
+      console.log(`⚠️ Save button not found with selector: ${selector}`);
+    }
+  }
+  await page.waitForTimeout(2000);
+}
+
+console.log('✅ Profile summary updated with add/remove "a" cycle successfully!');
+
           
           break;
         }
