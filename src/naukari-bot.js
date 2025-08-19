@@ -659,7 +659,7 @@ async function updateNaukriProfile() {
           await page.waitForTimeout(1000);
           
           // Get current text
-          // Get current text
+// Get current text
 const currentText = await summaryTextarea.inputValue();
 console.log(`📄 Current text length: ${currentText.length} characters`);
 
@@ -668,7 +668,7 @@ await summaryTextarea.fill(currentText + 'a');
 console.log('➕ Added "a" to summary');
 
 // Save changes
-console.log('💾 Saving summary with "a"...');
+console.log('💾 Saving summary...');
 for (const selector of saveButtonSelectors) {
   try {
     const button = page.locator(selector);
@@ -683,36 +683,7 @@ for (const selector of saveButtonSelectors) {
 }
 await page.waitForTimeout(2000);
 
-// Step B: Reopen Profile Summary again
-console.log('🔄 Reopening Profile summary to remove "a"...');
-await profileSummaryDiv.click();
-await page.waitForTimeout(1000);
-
-// Re-select textarea (important, since DOM might reload after save)
-const newTextarea = await page.locator('textarea[id="summary"]').first();
-if (await newTextarea.isVisible()) {
-  // Remove the "a" (restore original text)
-  await newTextarea.fill(currentText);
-  console.log('➖ Removed "a" from summary');
-
-  // Save again
-  console.log('💾 Saving summary without "a"...');
-  for (const selector of saveButtonSelectors) {
-    try {
-      const button = page.locator(selector);
-      if (await button.isVisible()) {
-        await button.click();
-        console.log(`✅ Clicked Save button using selector: ${selector}`);
-        break;
-      }
-    } catch (err) {
-      console.log(`⚠️ Save button not found with selector: ${selector}`);
-    }
-  }
-  await page.waitForTimeout(2000);
-}
-
-console.log('✅ Profile summary updated with add/remove "a" cycle successfully!');
+console.log('✅ Profile summary updated and saved successfully!');
 
           
           break;
