@@ -659,33 +659,23 @@ async function updateNaukriProfile() {
           await page.waitForTimeout(1000);
           
           // Get current text
-// Get current text
-const currentText = await summaryTextarea.inputValue();
-console.log(`📄 Current text length: ${currentText.length} characters`);
-
-// Step A: Add 'a' to the summary
-await summaryTextarea.fill(currentText + 'a');
-console.log('➕ Added "a" to summary');
-
-// Save changes
-console.log('💾 Saving summary...');
-for (const selector of saveButtonSelectors) {
-  try {
-    const button = page.locator(selector);
-    if (await button.isVisible()) {
-      await button.click();
-      console.log(`✅ Clicked Save button using selector: ${selector}`);
-      break;
-    }
-  } catch (err) {
-    console.log(`⚠️ Save button not found with selector: ${selector}`);
-  }
-}
-await page.waitForTimeout(2000);
-
-console.log('✅ Profile summary updated and saved successfully!');
-
+          const currentText = await summaryTextarea.inputValue();
+          console.log(`📄 Current text length: ${currentText.length} characters`);
           
+          // Add a space at the end
+          const textWithSpace = currentText + ' ';
+          await summaryTextarea.fill(textWithSpace);
+          console.log('➕ Added space to the end');
+          
+          // Wait 1 second
+          await page.waitForTimeout(1000);
+          
+          // Remove the space (restore original text)
+          await summaryTextarea.fill(currentText);
+          console.log('➖ Removed the space');
+          
+          // Wait a moment
+          await page.waitForTimeout(1000);         
           break;
         }
       } catch (e) {
